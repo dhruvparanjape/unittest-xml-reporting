@@ -653,7 +653,7 @@ class _XMLTestResult(TextTestResult):
                 suite_name = '%s-%s' % (suite, test_runner.outsuffix)
 
             # Build the XML file
-            testsuite = _XMLTestResult._report_testsuite(
+            testsuite = self._report_testsuite(
                 suite_name, tests, doc, parentElement, self.properties
             )
 
