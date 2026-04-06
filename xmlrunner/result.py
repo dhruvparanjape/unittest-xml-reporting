@@ -167,10 +167,12 @@ class _TestInfo(object):
 
         self.test_name = testcase_name(test_method)
         self.test_id = test_method.id()
+        self.test_str = str(test_method)
 
         if subTest:
             self.test_id = subTest.id()
             self.test_description = self.test_result.getDescription(subTest)
+            self.test_str = str(subTest)
 
         self.filename = filename
         self.lineno = lineno
@@ -179,11 +181,25 @@ class _TestInfo(object):
     def id(self):
         return self.test_id
 
+    def _get_elapsed_time(self):
+        """Return elapsed time from addDuration (3.12+) or start/stop delta.
+
+        In parallel test runners like Django's, startTest/stopTest events are 
+        replayed in the parent process, making stop_time - start_time near-zero. 
+        Python 3.12's addDuration carries the real worker-measured elapsed time
+        correctly allowing us to prevent this issue for 3.12+.
+        """
+        collected = getattr(self.test_result, 'collectedDurations', [])
+        for test_repr, elapsed in reversed(collected):
+            if test_repr == self.test_str:
+                return elapsed
+        
+        return self.test_result.stop_time - self.test_result.start_time
+
     def test_finished(self):
         """Save info that can only be calculated once a test has run.
         """
-        self.elapsed_time = \
-            self.test_result.stop_time - self.test_result.start_time
+        self.elapsed_time = self._get_elapsed_time()
         timestamp = datetime.datetime.fromtimestamp(self.test_result.stop_time)
         self.timestamp = timestamp.replace(microsecond=0).isoformat()
 
