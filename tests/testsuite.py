@@ -240,8 +240,18 @@ class XMLTestRunnerTestCase(unittest.TestCase):
         runner.run(suite)
         if isinstance(outdir, BytesIO):
             self.assertTrue(outdir.getvalue())
+            xml_content = outdir.getvalue()
         else:
-            self.assertEqual(1, len(glob(os.path.join(outdir, '*xml'))))
+            xml_files = glob(os.path.join(outdir, '*xml'))
+            self.assertEqual(1, len(xml_files))
+            with open(xml_files[0], 'rb') as f:
+                xml_content = f.read()
+
+        doc = minidom.parseString(xml_content)
+        for testcase in doc.getElementsByTagName('testcase'):
+            elapsed = float(testcase.getAttribute('time'))
+            self.assertGreaterEqual(elapsed, 0.0)
+
         return runner
 
     def test_basic_unittest_constructs(self):
@@ -903,6 +913,15 @@ class XMLTestRunnerTestCase(unittest.TestCase):
         suite.addTest(TestWithPartialmethod('test_partialmethod'))
         self._test_xmlrunner(suite)
 
+    def test_elapsed_time_with_docstring(self):
+        class DocstringTest(unittest.TestCase):
+            def test_with_doc(self):
+                """This test has a docstring."""
+                pass
+
+        suite = unittest.TestSuite()
+        suite.addTest(DocstringTest('test_with_doc'))
+        self._test_xmlrunner(suite)
 
 
 class DuplicateWriterTestCase(unittest.TestCase):
